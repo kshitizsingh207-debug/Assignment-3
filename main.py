@@ -75,6 +75,23 @@ class ImageProcessor:
             self.manager.base_image = self.manager.edge_backup.copy()
             self.manager.is_edge = False
 
+    def blur(self, value):
+        base = self.manager.original_image.copy()
+        if value > 0:
+            k = max(1, value * 2 + 1)
+            self.manager.base_image = cv2.GaussianBlur(base, (k, k), 0)
+        else:
+            self.manager.base_image = base.copy()
+
+    def adjust_contrast(self, value):
+        base = self.manager.original_image.copy()
+        alpha = value / 50  # 50 is default
+        self.manager.base_image = cv2.convertScaleAbs(base, alpha=alpha, beta=0)
+
+    def adjust_brightness(self, value):
+        base = self.manager.original_image.copy()
+        self.manager.base_image = cv2.convertScaleAbs(base, alpha=1, beta=value)
+
     def resize_proportional(self, scale_percent):
         if self.manager.base_image is not None:
             h, w = self.manager.base_image.shape[:2]
@@ -88,8 +105,8 @@ class ImageProcessor:
 class ImageEditorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Grayscale & Edge Detection Editor")
-        self.root.geometry("900x600")
+        self.root.title("Image Editor")
+        self.root.geometry("1050x650")
 
         self.manager = ImageManager()
         self.processor = ImageProcessor(self.manager)
@@ -121,11 +138,39 @@ class ImageEditorGUI:
         self.image_label = tk.Label(self.root, bg="gray")
         self.image_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        panel = tk.Frame(self.root, width=200)
+        panel = tk.Frame(self.root, width=250)
         panel.pack(side=tk.RIGHT, fill=tk.Y)
 
         tk.Button(panel, text="Grayscale (Toggle)", command=self.apply_grayscale).pack(fill="x", pady=5)
         tk.Button(panel, text="Edge Detection (Toggle)", command=self.apply_edge).pack(fill="x", pady=5)
+
+        # Blur
+        tk.Label(panel, text="Blur").pack(pady=(10,0))
+        self.blur_slider = tk.Scale(panel, from_=0, to=10, orient="horizontal")
+        self.blur_slider.pack(fill="x")
+        tk.Button(panel, text="Apply Blur", command=self.apply_blur).pack(fill="x", pady=5)
+
+        # Contrast
+        tk.Label(panel, text="Contrast").pack(pady=(10,0))
+        self.contrast_slider = tk.Scale(panel, from_=0, to=100, orient="horizontal")
+        self.contrast_slider.set(50)
+        self.contrast_slider.pack(fill="x")
+        tk.Button(panel, text="Apply Contrast", command=self.apply_contrast).pack(fill="x", pady=5)
+
+        # Brightness
+        tk.Label(panel, text="Brightness").pack(pady=(10,0))
+        self.brightness_slider = tk.Scale(panel, from_=-100, to=100, orient="horizontal")
+        self.brightness_slider.set(0)
+        self.brightness_slider.pack(fill="x")
+        tk.Button(panel, text="Apply Brightness", command=self.apply_brightness).pack(fill="x", pady=5)
+
+        # Resize
+        tk.Label(panel, text="Resize").pack(pady=(10,0))
+        resize_frame = tk.Frame(panel)
+        resize_frame.pack(pady=(0,5))
+        tk.Button(resize_frame, text="-", width=3, command=lambda: self.resize_image(-10)).grid(row=0, column=0, padx=5)
+        tk.Label(resize_frame, text="Scale").grid(row=0, column=1)
+        tk.Button(resize_frame, text="+", width=3, command=lambda: self.resize_image(10)).grid(row=0, column=2, padx=5)
 
     # -------- FILE --------
     def open_image(self):
@@ -134,6 +179,10 @@ class ImageEditorGUI:
             self.manager.load_image(path)
             self.processor.resize_proportional(self.scale_percent)
             self.update_display()
+            self.blur_slider.set(0)
+            self.contrast_slider.set(50)
+            self.brightness_slider.set(0)
+            self.scale_percent = 100
 
     # -------- EDIT --------
     def undo(self):
@@ -159,6 +208,33 @@ class ImageEditorGUI:
         self.processor.resize_proportional(self.scale_percent)
         self.update_display()
 
+    def apply_blur(self):
+        self.manager.save_state()
+        self.processor.blur(self.blur_slider.get())
+        self.processor.resize_proportional(self.scale_percent)
+        self.update_display()
+
+    def apply_contrast(self):
+        self.manager.save_state()
+        self.processor.adjust_contrast(self.contrast_slider.get())
+        self.processor.resize_proportional(self.scale_percent)
+        self.update_display()
+
+    def apply_brightness(self):
+        self.manager.save_state()
+        self.processor.adjust_brightness(self.brightness_slider.get())
+        self.processor.resize_proportional(self.scale_percent)
+        self.update_display()
+
+    # -------- RESIZE --------
+    def resize_image(self, delta_percent):
+        if self.manager.base_image is None:
+            return
+        self.manager.save_state()
+        self.scale_percent = max(1, self.scale_percent + delta_percent)
+        self.processor.resize_proportional(self.scale_percent)
+        self.update_display()
+
     # -------- DISPLAY --------
     def update_display(self):
         img = self.manager.current_image
@@ -171,7 +247,7 @@ class ImageEditorGUI:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         img = Image.fromarray(img)
-        img.thumbnail((700, 600))
+        img.thumbnail((750, 600))
 
         self.tk_img = ImageTk.PhotoImage(img)
         self.image_label.config(image=self.tk_img)
