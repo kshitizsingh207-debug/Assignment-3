@@ -38,6 +38,7 @@ class ImageProcessor:
             self.manager.current = self.backup.copy()
             self.is_edge = False
 
+<<<<<<< HEAD
     def brightness(self, value):
         self.manager.current = cv2.convertScaleAbs(
             self.manager.original, alpha=1, beta=value
@@ -48,12 +49,40 @@ class ImageProcessor:
         self.manager.current = cv2.convertScaleAbs(
             self.manager.original, alpha=alpha, beta=0
         )
+=======
+    def blur(self, value):
+        base = self.manager.original_image.copy()
+        if value > 0:
+            k = max(1, value * 2 + 1)
+            self.manager.base_image = cv2.GaussianBlur(base, (k, k), 0)
+        else:
+            self.manager.base_image = base.copy()
+
+    def adjust_contrast(self, value):
+        base = self.manager.original_image.copy()
+        alpha = value / 50  # 50 is default
+        self.manager.base_image = cv2.convertScaleAbs(base, alpha=alpha, beta=0)
+
+    def resize_proportional(self, scale_percent):
+        if self.manager.base_image is not None:
+            h, w = self.manager.base_image.shape[:2]
+            new_w = max(1, int(w * scale_percent / 100))
+            new_h = max(1, int(h * scale_percent / 100))
+            self.manager.current_image = cv2.resize(
+                self.manager.base_image, (new_w, new_h), interpolation=cv2.INTER_AREA
+            )
+>>>>>>> 5eb328aa2fe3bdd4367107c1b04453dd4c7cba95
 
 class ImageEditorGUI:
     def __init__(self, root):
         self.root = root
+<<<<<<< HEAD
         self.root.title("Simple Image Editor")
         self.root.geometry("900x600")
+=======
+        self.root.title("Image Editor")
+        self.root.geometry("1000x650")
+>>>>>>> 5eb328aa2fe3bdd4367107c1b04453dd4c7cba95
 
         self.manager = ImageManager()
         self.processor = ImageProcessor(self.manager)
@@ -94,15 +123,40 @@ class ImageEditorGUI:
         self.contrast_slider.pack(fill="x")
         tk.Button(panel, text="Apply Contrast", command=self.contrast).pack(fill="x")
 
+<<<<<<< HEAD
+=======
+        # Blur
+        tk.Label(panel, text="Blur").pack(pady=(10,0))
+        self.blur_slider = tk.Scale(panel, from_=0, to=10, orient="horizontal")
+        self.blur_slider.pack(fill="x")
+        tk.Button(panel, text="Apply Blur", command=self.apply_blur).pack(fill="x", pady=5)
+
+        # Contrast
+        tk.Label(panel, text="Contrast").pack(pady=(10,0))
+        self.contrast_slider = tk.Scale(panel, from_=0, to=100, orient="horizontal")
+        self.contrast_slider.set(50)
+        self.contrast_slider.pack(fill="x")
+        tk.Button(panel, text="Apply Contrast", command=self.apply_contrast).pack(fill="x", pady=5)
+
+    # -------- FILE --------
+>>>>>>> 5eb328aa2fe3bdd4367107c1b04453dd4c7cba95
     def open_image(self):
         path = filedialog.askopenfilename(
             filetypes=[("Image Files", "*.jpg *.png *.bmp")]
         )
         if path:
+<<<<<<< HEAD
             self.manager.path = path
             self.manager.original = cv2.imread(path)
             self.manager.current = self.manager.original.copy()
             self.update_image()
+=======
+            self.manager.load_image(path)
+            self.processor.resize_proportional(self.scale_percent)
+            self.update_display()
+            self.blur_slider.set(0)
+            self.contrast_slider.set(50)
+>>>>>>> 5eb328aa2fe3bdd4367107c1b04453dd4c7cba95
 
     def save_image(self):
         if self.manager.current is not None:
@@ -117,6 +171,7 @@ class ImageEditorGUI:
         self.processor.toggle_edge()
         self.update_image()
 
+<<<<<<< HEAD
     def brightness(self):
         self.processor.brightness(self.brightness_slider.get())
         self.update_image()
@@ -127,6 +182,23 @@ class ImageEditorGUI:
 
     def update_image(self):
         img = self.manager.current
+=======
+    def apply_blur(self):
+        self.manager.save_state()
+        self.processor.blur(self.blur_slider.get())
+        self.processor.resize_proportional(self.scale_percent)
+        self.update_display()
+
+    def apply_contrast(self):
+        self.manager.save_state()
+        self.processor.adjust_contrast(self.contrast_slider.get())
+        self.processor.resize_proportional(self.scale_percent)
+        self.update_display()
+
+    # -------- DISPLAY --------
+    def update_display(self):
+        img = self.manager.current_image
+>>>>>>> 5eb328aa2fe3bdd4367107c1b04453dd4c7cba95
         if img is None:
             return
 
@@ -136,7 +208,12 @@ class ImageEditorGUI:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
         img = Image.fromarray(img)
+<<<<<<< HEAD
         img.thumbnail((600, 500))
+=======
+        img.thumbnail((750, 600))
+
+>>>>>>> 5eb328aa2fe3bdd4367107c1b04453dd4c7cba95
         self.tk_img = ImageTk.PhotoImage(img)
         self.image_label.config(image=self.tk_img)
 
